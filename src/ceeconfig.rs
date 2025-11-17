@@ -54,7 +54,7 @@ impl Default for Config {
             build: Build {
                 compiler:        "cc".into(),
                 debug_flags:     "-Wall -Wpedantic".into(),
-                release_flags:   "-Wall -Wpedantic -O2".into(),
+                release_flags:   "%debug_flags% -O2".into(),
                 source_files:    "src/main.c".into(),
                 bin_directory:   "bin".into(),
                 command_format:  None,
@@ -115,7 +115,16 @@ impl Config {
         }
 
         let flags = if is_release {
-            &self.build.release_flags
+            // Allow release flags to copy the flags already written in debug_flags with the %debug_flags% flag
+            // (Don't allow %release_flags% in debug_flags to prevent passing the raw format flag to the compiler)
+            if self.build.release_flags.contains("%debug_flags%") {
+                &self
+                    .build
+                    .release_flags
+                    .replace("%debug_flags%", &self.build.debug_flags)
+            } else {
+                &self.build.release_flags
+            }
         } else {
             &self.build.debug_flags
         };
